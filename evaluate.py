@@ -8,7 +8,7 @@ def evaluate_bleu(num_samples=None):
     model, tokenizer, device = load_artifacts(
         tokenizer_dir="./custom_bpe_tokenizer",
         checkpoint_path="checkpoints/best_model.pt",
-        hidden_size=256
+        hidden_size=512
     )
     
     # 2. Load the unseen test split (1,000 sentences in Multi30k)

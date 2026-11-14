@@ -14,7 +14,7 @@ def clean_detokenize(text): # added after getting a warning from sacrebleu durin
     return text.strip()
 
 
-def load_artifacts(tokenizer_dir="./custom_bpe_tokenizer", checkpoint_path="checkpoints/best_model.pt", hidden_size=256):
+def load_artifacts(tokenizer_dir="./custom_bpe_tokenizer", checkpoint_path="checkpoints/best_model.pt", hidden_size=512):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # 1. Load the exact BPE vocabulary saved during training
@@ -22,7 +22,7 @@ def load_artifacts(tokenizer_dir="./custom_bpe_tokenizer", checkpoint_path="chec
     vocab_size = len(tokenizer)
     
     # 2. Initialize model architecture and load trained weights
-    model = EncoderDecoderGRU(vocab_size, hidden_size).to(device)
+    model = EncoderDecoderGRU(vocab_size, hidden_size, num_layers =2, dropout= 0.3).to(device)
     checkpoint = torch.load(checkpoint_path, map_location=device)
     
     # Handle both raw state_dicts and dictionary checkpoints (common with EarlyStopping helpers)

@@ -111,8 +111,8 @@ if __name__ == "__main__":
     hidden_size = 256  # we can adjust this based on your model's complexity and available resources
 
     model = EncoderDecoderGRU(vocab_size, hidden_size).to(device)
-    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id, label_smoothing=0.1)
+    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
 
     tracker = EarlyStoppingAndCheckpoint(patience=5, min_delta=1e-4)

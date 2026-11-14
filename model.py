@@ -23,6 +23,10 @@ class EncoderDecoderGRU(nn.Module):
 
         # Tie the final layer to vocab_size as required by CrossEntropyLoss
         self.fc = nn.Linear(hidden_size, vocab_size)
+        self.fc.weight = self.embedding.weight # for weight tying - it cuts number of params and reduces overfitting
+        #Instead of learning two separate large matrices—one to convert input token IDs into vectors (input embeddings) 
+        # and another to project hidden states back into vocabulary probabilities (output classifier/softmax layer)
+        # —the model uses a single unified matrix
 
     def forward(self, src, src_lengths, trg):
         # - ENCODER STEP -
