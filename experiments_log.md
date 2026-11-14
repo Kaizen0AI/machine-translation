@@ -20,3 +20,13 @@ Test Corpus BLEU Score: 18.11
 
 conclusion - increasing the model capacity increased the score significantly but its still overfitting, even with dropout(0.3)
 next steps - add label smoothing, weight decay and weight tying to the model to improve generalization. 
+
+## Experiment 3
+
+best epoch → Epoch [12/20], Train Loss: 2.0616, Val Loss: 3.5392, Val Accuracy: 0.5657, LR: 0.000500
+last epoch → Epoch [17/20], Train Loss: 1.7910, Val Loss: 3.5754, Val Accuracy: 0.5629, LR: 0.000250
+
+Test Corpus BLEU Score: 0.1
+
+conclusion -  weight tying was a bad idea in this scenario, self.fc and self.embedding sharing the same matrix created an unbalanced loop. label smothing and weight decay are safer for regularization. 
+next steps - remove weight tying and increase dropout to 0.4

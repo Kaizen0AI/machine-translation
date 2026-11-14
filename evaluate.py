@@ -2,12 +2,16 @@ import sacrebleu
 from tqdm import tqdm
 from datasets import load_dataset
 from predict import load_artifacts, translate_sentence_beam
+import os
+
+checkpoint_path = os.getenv("CHECKPOINT_PATH", "checkpoints/best_model.pt")
+tokenizer_dir = os.getenv("TOKENIZER_DIR", "custom_bpe_tokenizer")
 
 def evaluate_bleu(num_samples=None):
     # 1. Load your best saved model and BPE tokenizer
     model, tokenizer, device = load_artifacts(
-        tokenizer_dir="./custom_bpe_tokenizer",
-        checkpoint_path="checkpoints/best_model.pt",
+        tokenizer_dir,
+        checkpoint_path,
         hidden_size=512
     )
     
