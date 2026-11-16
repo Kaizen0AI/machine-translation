@@ -50,3 +50,6 @@ next step - compare this model to BiLSTM, (expecting only minor improvements).
 ## Experiment 4 -
 Changes → Using BiLSTM instead of GRU
 Aim → Compare Standard GRU with BiLSTM before implementing Attention. 
+
+Best epoch → Epoch [20/30], Train Loss: 2.2559, Val Loss: 3.6601, Val Accuracy: 0.5328, LR: 0.000500
+Last epoch → Epoch [25/30], Train Loss: 2.0069, Val Loss: 3.6978, Val Accuracy: 0.5347, LR: 0.000250

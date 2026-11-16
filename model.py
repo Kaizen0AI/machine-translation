@@ -23,7 +23,20 @@ class EncoderDecoderGRU(nn.Module):
 
         self.fc = nn.Linear(hidden_size, vocab_size)
 
+    def encode(self, src, src_lengths=None):
+        src_embedded = self.dropout(self.embedding(src))
+        if src_lengths is not None:
+            packed = nn.utils.rnn.pack_padded_sequence(
+                src_embedded, src_lengths.cpu(), batch_first=True, enforce_sorted=False
+            )
+            _, h_n = self.encoder(packed)
+        else:
+            _, h_n = self.encoder(src_embedded)
+        return h_n
+
+
     def forward(self, src, src_lengths, trg):
+        '''
         # - ENCODER STEP -
         # Embed the English source text
         src_embedded = self.dropout(self.embedding(src))
@@ -39,7 +52,8 @@ class EncoderDecoderGRU(nn.Module):
 
         # pass the packed seq through the encoder, we only need the final hidden state(h_n) for the decoder
         _, h_n = self.encoder(packed_embedding)
-
+        '''
+        h_n = self.encode(src, src_lengths)
         # - DECODER STEP -
         # Embed the German target text (Teacher forcing)
         trg_embedding = self.dropout(self.embedding(trg))

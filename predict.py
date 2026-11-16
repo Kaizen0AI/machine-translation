@@ -90,9 +90,10 @@ def translate_sentence_beam(sentence, model, tokenizer, device, beam_width=3, ma
         encoded = tokenizer(sentence, add_special_tokens=False)
         src_ids = [tokenizer.bos_token_id] + encoded["input_ids"] + [tokenizer.eos_token_id]
         src_tensor = torch.tensor(src_ids, dtype=torch.long).unsqueeze(0).to(device)
-        
-        src_embedded = model.embedding(src_tensor)
-        _, encoder_hidden = model.encoder(src_embedded)
+
+        # FIX: Call model.encode() so the bidirectional [4, 1, 512] states pass through 
+        # bridge_h and bridge_c to become the (dec_h, dec_c) tuple of shape [2, 1, 512]
+        encoder_hidden = model.encode(src_tensor)
         
         # 2. Initialize the beam: list of tuples (cumulative_log_prob, token_id_list, hidden_state)
         beams = [(0.0, [tokenizer.bos_token_id], encoder_hidden)]
@@ -148,7 +149,7 @@ def translate_sentence_beam(sentence, model, tokenizer, device, beam_width=3, ma
         )
 
         # Decode predicted IDs (skipping <BOS> at index 0)
-        translation = tokenizer.decode(best_seq[1:], skip_special_tokens=True, clean_up_tokenizaton_spaces = True)
+        translation = tokenizer.decode(best_seq[1:], skip_special_tokens=True, clean_up_tokenization_spaces = True)
 
         cleaned_translation = clean_detokenize(translation)
     
