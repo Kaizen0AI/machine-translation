@@ -118,7 +118,7 @@ class EncoderDecoderBiLSTM(nn.Module):
         dec_h, dec_c = self.encode(src, src_lengths)
 
         trg_embedded = self.dropout(self.embedding(trg))
-        decoder_out = self.decoder(trg_embedded, (dec_h, dec_c))
+        decoder_out, _ = self.decoder(trg_embedded, (dec_h, dec_c))
 
         return self.fc(decoder_out)
     
