@@ -2,7 +2,7 @@ from data import get_dataloaders
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from model import EncoderDecoderGRU
+from model import EncoderDecoderBiLSTM
 from tqdm import tqdm
 import os
 import json
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     vocab_size = len(tokenizer)
     hidden_size = 256  # we can adjust this based on your model's complexity and available resources
 
-    model = EncoderDecoderGRU(vocab_size, hidden_size).to(device)
+    model = EncoderDecoderBiLSTM(vocab_size, hidden_size).to(device)
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id, label_smoothing=0.1)
     optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)

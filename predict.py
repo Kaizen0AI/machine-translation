@@ -1,6 +1,6 @@
 import torch
 from transformers import PreTrainedTokenizerFast
-from model import EncoderDecoderGRU
+from model import EncoderDecoderBiLSTM
 import torch.nn.functional as F
 import re
 import os
@@ -24,7 +24,7 @@ def load_artifacts(tokenizer_dir, checkpoint_path, hidden_size=512):
     vocab_size = len(tokenizer)
     
     # 2. Initialize model architecture and load trained weights
-    model = EncoderDecoderGRU(vocab_size, hidden_size, num_layers =2, dropout= 0.4).to(device)
+    model = EncoderDecoderBiLSTM(vocab_size, hidden_size, num_layers =2, dropout= 0.4).to(device)
     checkpoint = torch.load(checkpoint_path, map_location=device)
     
     # Handle both raw state_dicts and dictionary checkpoints (common with EarlyStopping helpers)
@@ -79,7 +79,7 @@ def translate_sentence(sentence, model, tokenizer, device, max_length=50):
             current_token = torch.tensor([[next_token_id]], dtype=torch.long).to(device)
             
     # 5. Convert predicted token IDs back into a readable German string
-    translation = tokenizer.decode(predicted_ids, skip_special_tokens=True)
+    translation = tokenizer.decode(predicted_ids, skip_special_tokens=True, clean_up_tokenization_spaces = True)
     return translation
 
 def translate_sentence_beam(sentence, model, tokenizer, device, beam_width=3, max_length=50, length_penalty=0.7):
@@ -148,7 +148,7 @@ def translate_sentence_beam(sentence, model, tokenizer, device, beam_width=3, ma
         )
 
         # Decode predicted IDs (skipping <BOS> at index 0)
-        translation = tokenizer.decode(best_seq[1:], skip_special_tokens=True)
+        translation = tokenizer.decode(best_seq[1:], skip_special_tokens=True, clean_up_tokenizaton_spaces = True)
 
         cleaned_translation = clean_detokenize(translation)
     
