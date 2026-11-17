@@ -2,7 +2,7 @@ from data import get_dataloaders
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from model import EncoderDecoderBiLSTM
+from model import EncoderDecoderAttention
 from tqdm import tqdm
 import os
 import json
@@ -22,6 +22,7 @@ def train_model(device, model, criterion, optimizer, train_loader, val_loader, s
                 val_input_ids = val_batch["input_ids"].to(device)
                 val_input_lengths = val_batch["input_lengths"].to(device)
                 val_labels = val_batch["labels"].to(device)
+                val_attention_mask = val_batch["attention_mask"].to(device)
 
                 # shift targets: input has [<BOS>, w1, w2], target has [w1, w2, <EOS>], 
                 # so we need to shift the target labels by one position to the right for teacher forcing
@@ -29,7 +30,7 @@ def train_model(device, model, criterion, optimizer, train_loader, val_loader, s
                 target_labels = val_labels[:, 1:]  # all tokens except the first one
 
                 # Forward pass
-                val_outputs = model(val_input_ids, val_input_lengths, decoder_input)
+                val_outputs = model(val_input_ids, val_input_lengths, decoder_input, val_attention_mask)
 
                 # Compute loss/ cross-entropy expects (N, C) for logits and (N) for labels,
                 # so we flatten the outputs and labels(N = batch_size * seq_len = total_tokens, C = vocab_size)
@@ -58,6 +59,7 @@ def train_model(device, model, criterion, optimizer, train_loader, val_loader, s
             input_ids = batch["input_ids"].to(device)
             input_lengths = batch["input_lengths"].to(device)
             labels = batch["labels"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
 
             # shift targets for teacher forcing
             decoder_input = labels[:, :-1]  # all tokens except the last one
@@ -66,7 +68,7 @@ def train_model(device, model, criterion, optimizer, train_loader, val_loader, s
             optimizer.zero_grad() #resets gradients before every batch to avoid accumulation from previous batches
 
             # Forward pass
-            outputs = model(input_ids, input_lengths, decoder_input)
+            outputs = model(input_ids, input_lengths, decoder_input, attention_mask)
 
             # Compute loss (using .reshape() safely handles non-contiguous sliced tensors)
             loss = criterion(outputs.reshape(-1, outputs.size(-1)), target_labels.reshape(-1))
@@ -110,7 +112,7 @@ if __name__ == "__main__":
     vocab_size = len(tokenizer)
     hidden_size = 256  # we can adjust this based on your model's complexity and available resources
 
-    model = EncoderDecoderBiLSTM(vocab_size, hidden_size).to(device)
+    model = EncoderDecoderAttention(vocab_size, hidden_size).to(device)
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id, label_smoothing=0.1)
     optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)

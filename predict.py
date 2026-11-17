@@ -1,6 +1,6 @@
 import torch
 from transformers import PreTrainedTokenizerFast
-from model import EncoderDecoderBiLSTM
+from model import EncoderDecoderAttention
 import torch.nn.functional as F
 import re
 import os
@@ -24,7 +24,7 @@ def load_artifacts(tokenizer_dir, checkpoint_path, hidden_size=512):
     vocab_size = len(tokenizer)
     
     # 2. Initialize model architecture and load trained weights
-    model = EncoderDecoderBiLSTM(vocab_size, hidden_size, num_layers =2, dropout= 0.4).to(device)
+    model = EncoderDecoderAttention(vocab_size, hidden_size, num_layers =2, dropout= 0.4).to(device)
     checkpoint = torch.load(checkpoint_path, map_location=device)
     
     # Handle both raw state_dicts and dictionary checkpoints (common with EarlyStopping helpers)
@@ -89,13 +89,15 @@ def translate_sentence_beam(sentence, model, tokenizer, device, beam_width=3, ma
         # 1. Encode the English input sentence
         encoded = tokenizer(sentence, add_special_tokens=False)
         src_ids = [tokenizer.bos_token_id] + encoded["input_ids"] + [tokenizer.eos_token_id]
-        src_tensor = torch.tensor(src_ids, dtype=torch.long).unsqueeze(0).to(device)
-
-        # FIX: Call model.encode() so the bidirectional [4, 1, 512] states pass through 
-        # bridge_h and bridge_c to become the (dec_h, dec_c) tuple of shape [2, 1, 512]
-        encoder_hidden = model.encode(src_tensor)
+        src_tensor = torch.tensor(src_ids, dtype=torch.long).unsqueeze(0).to(device)  # [1, src_len]
         
-        # 2. Initialize the beam: list of tuples (cumulative_log_prob, token_id_list, hidden_state)
+        # Create attention mask of all 1s (no <PAD> tokens in single-sentence inference)
+        attention_mask = torch.ones_like(src_tensor, dtype=torch.long).to(device)      # [1, src_len]
+        
+        # Get all encoder hidden states AND the initial bridged (dec_h, dec_c) tuple
+        encoder_outputs, encoder_hidden = model.encode(src_tensor)
+        
+        # 2. Initialize the beam: (cumulative_log_prob, token_id_list, (h_state, c_state))
         beams = [(0.0, [tokenizer.bos_token_id], encoder_hidden)]
         completed_hypotheses = []
         
@@ -103,22 +105,19 @@ def translate_sentence_beam(sentence, model, tokenizer, device, beam_width=3, ma
             all_candidates = []
             
             for score, seq, hidden in beams:
-                # If this beam already hit <EOS>, save it and don't expand it further
                 if seq[-1] == tokenizer.eos_token_id:
                     completed_hypotheses.append((score, seq))
                     continue
                 
-                # Feed only the last predicted token into the decoder
                 current_token = torch.tensor([[seq[-1]]], dtype=torch.long).to(device)
-                trg_embedded = model.embedding(current_token)
                 
-                decoder_out, next_hidden = model.decoder(trg_embedded, hidden)
-                logits = model.fc(decoder_out[:, -1, :])  # Shape: [1, vocab_size]
+                # Run one attention-guided decoding step
+                logits, next_hidden, _ = model.decode_step(
+                    current_token, hidden, encoder_outputs, attention_mask
+                )
                 
-                # Convert logits to log-probabilities so we can add scores safely
-                log_probs = F.log_softmax(logits, dim=-1).squeeze(0)  # Shape: [vocab_size]
-                
-                # Grab the top `beam_width` next words for this specific beam
+                # logits already has shape [1, vocab_size] from decode_step
+                log_probs = F.log_softmax(logits, dim=-1).squeeze(0)  # [vocab_size]
                 top_log_probs, top_ids = torch.topk(log_probs, beam_width)
                 
                 for i in range(beam_width):
@@ -126,34 +125,33 @@ def translate_sentence_beam(sentence, model, tokenizer, device, beam_width=3, ma
                     new_score = score + top_log_probs[i].item()
                     all_candidates.append((new_score, seq + [next_word_id], next_hidden))
             
-            # Stop early if all active beams have finished
             if not all_candidates:
                 break
                 
-            # Sort all expanded candidates by length-normalized score and keep top `beam_width`
-            all_candidates.sort(key=lambda x: x[0] / (len(x[1]) ** length_penalty), reverse=True)
+            all_candidates.sort(key=lambda x: x / (len(x) ** length_penalty), reverse=True)
             beams = all_candidates[:beam_width]
             
-            # Stop early if we already collected enough completed sentences
             if len(completed_hypotheses) >= beam_width:
                 break
         
-        # If no beam hit <EOS> within max_length, fall back to active beams
         if not completed_hypotheses:
             completed_hypotheses = [(score, seq) for score, seq, _ in beams]
             
-        # Pick the single best sequence after length normalization
         best_score, best_seq = max(
             completed_hypotheses, 
-            key=lambda x: x[0] / (len(x[1]) ** length_penalty)
+            key=lambda x: x / (len(x) ** length_penalty)
         )
 
-        # Decode predicted IDs (skipping <BOS> at index 0)
-        translation = tokenizer.decode(best_seq[1:], skip_special_tokens=True, clean_up_tokenization_spaces = True)
-
+        # Clean decode without the BPE space-stripping warning
+        translation = tokenizer.decode(
+            best_seq[1:], 
+            skip_special_tokens=True, 
+            clean_up_tokenization_spaces=False
+        )
         cleaned_translation = clean_detokenize(translation)
     
     return cleaned_translation
+
 
 
 if __name__ == "__main__":

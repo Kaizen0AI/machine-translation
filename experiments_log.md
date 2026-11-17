@@ -53,3 +53,11 @@ Aim → Compare Standard GRU with BiLSTM before implementing Attention.
 
 Best epoch → Epoch [20/30], Train Loss: 2.2559, Val Loss: 3.6601, Val Accuracy: 0.5328, LR: 0.000500
 Last epoch → Epoch [25/30], Train Loss: 2.0069, Val Loss: 3.6978, Val Accuracy: 0.5347, LR: 0.000250
+
+Test Corpus BLEU Score: 21.41
+conclusion - was not expecting the drop in score but i can see the reasons why it did, 
+             1. Total number of parameters increases with extra gate matrices & bridge layers, because Multi30k dataset is small(only 29k training pairs), it makes the model more prone to over fitting. 
+             2. Brige layers squeezes 1024 concatenated bidirectional featuers to 512 through a single tanh projection, which leads to loss of finer details about the input before the decoder even starts. One thing that i think can be imporved is that instead of applying tanh activation on both cell state(c_n) and hidden state(h_n) we can try only applying tanh on hidden state, as its naturally bounded between -1 & 1 by tanh inside the LSTM cell, and keep cell state pure linear at the bridge as cell states is an unbounded memory accumolator which go outside -1 & 1. this can allow for preservation of unbounded memory state. 
+             Another thing we can do to avoided memory loss due to compression is instead of compressing 1024 → 512 we can keep the same number of features and make decoder wider(hidden size = 1024). 
+
+Next step - add Bahdanau (Additive) Attention to the BiLSTM model.
