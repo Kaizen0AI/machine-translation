@@ -61,3 +61,6 @@ conclusion - was not expecting the drop in score but i can see the reasons why i
              Another thing we can do to avoided memory loss due to compression is instead of compressing 1024 → 512 we can keep the same number of features and make decoder wider(hidden size = 1024). 
 
 Next step - add Bahdanau (Additive) Attention to the BiLSTM model.
+
+Epoch [11/30], Train Loss: 1.7759, Val Loss: 3.1647, Val Accuracy: 0.6283, LR: 0.000500
+Epoch  [16/30], Train Loss: 1.5624, Val Loss: 3.2247, Val Accuracy: 0.6263, LR: 0.000250

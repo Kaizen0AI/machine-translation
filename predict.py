@@ -128,7 +128,7 @@ def translate_sentence_beam(sentence, model, tokenizer, device, beam_width=3, ma
             if not all_candidates:
                 break
                 
-            all_candidates.sort(key=lambda x: x / (len(x) ** length_penalty), reverse=True)
+            all_candidates.sort(key=lambda x: x[0] / (len(x[1]) ** length_penalty), reverse=True)
             beams = all_candidates[:beam_width]
             
             if len(completed_hypotheses) >= beam_width:
@@ -139,7 +139,7 @@ def translate_sentence_beam(sentence, model, tokenizer, device, beam_width=3, ma
             
         best_score, best_seq = max(
             completed_hypotheses, 
-            key=lambda x: x / (len(x) ** length_penalty)
+            key=lambda x: x[0] / (len(x[1]) ** length_penalty)
         )
 
         # Clean decode without the BPE space-stripping warning
